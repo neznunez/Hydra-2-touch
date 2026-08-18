@@ -1,0 +1,26 @@
+{
+  "name": "hydra-2-touch-desktop",
+  "version": "1.0.0",
+  "description": "Hydra live-coding desktop instrument with native Spout output",
+  "main": "main.js",
+  "author": "neznunez",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "42.9.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "art.hydra2touch.desktop",
+    "productName": "Hydra 2 Touch",
+    "asar": true,
+    "files": ["main.js", "preload.js", "index.html", "renderer.js", "styles.css", "scrollbar.css", "quality.css", "vendor/**/*"],
+    "extraResources": [{"from": "resources/native/electron-spout.node", "to": "native/electron-spout.node"}],
+    "directories": {"output": "../../dist"},
+    "win": {"target": "portable", "artifactName": "Hydra-2-Touch-${version}.exe"}
+  }
+}
+

@@ -1,11 +1,38 @@
 # Hydra 2 Touch
 
-Hydra Studio desktop para live coding visual, com edição de código em tempo real e integração de baixa latência com TouchDesigner por Spout.
+Aplicativo Windows para live coding com Hydra e envio direto ao TouchDesigner por Spout.
+
+## Versão 1.0
+
+- Editor de código sobreposto ao resultado visual.
+- Execução automática durante a edição.
+- Botões de play e shuffle.
+- `Shift + F` alterna tela cheia; `F11` oculta o código.
+- Arquivo JavaScript compartilhado para edição externa em tempo real.
+- Sender Spout **Hydra 2 Touch**, 1920 × 1080 a 60 fps.
 
 ## Estrutura
 
-- `app/`: aplicativo Electron/Hydra Studio.
-- `native/electron-spout/`: módulo nativo Spout para Electron 42.
-- `.github/workflows/`: compilação do módulo nativo em uma máquina Windows do GitHub.
+```text
+apps/desktop/          Aplicativo Electron e interface Hydra
+native/electron-spout/ Módulo nativo C++/DirectX/Spout
+docs/                  Uso, integração e referências
+dist/                  Executáveis gerados (ignorado pelo Git)
+```
 
-O módulo Spout é compilado na nuvem para evitar a instalação local do Visual Studio Build Tools e do Windows SDK.
+## Desenvolvimento
+
+```powershell
+pnpm install
+pnpm start
+```
+
+## Build Windows
+
+O workflow `Build Electron Spout for Electron 42` compila o módulo nativo no GitHub Actions. Coloque o artefato `electron-spout.node` em `apps/desktop/resources/native/` e execute:
+
+```powershell
+pnpm build
+```
+
+Para conectar no TouchDesigner, consulte [docs/TOUCHDESIGNER.md](docs/TOUCHDESIGNER.md).

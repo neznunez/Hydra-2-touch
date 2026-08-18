@@ -29,9 +29,11 @@ shape(6, 0.35, 0.02)
   .out(o0)`
 ]
 
+const outputMode = new URLSearchParams(location.search).get('output') === '1'
+document.body.classList.toggle('output-mode', outputMode)
 const canvas = document.createElement('canvas')
 document.querySelector('.stage').prepend(canvas)
-const renderScale = 2
+const renderScale = outputMode ? 1 : 2
 canvas.width = Math.round(innerWidth * renderScale)
 canvas.height = Math.round(innerHeight * renderScale)
 const hydra = new Hydra({ canvas, detectAudio:false, makeGlobal:true })
@@ -83,7 +85,7 @@ function setCode(code) {
   updateHighlight()
   execute()
   window.hydraLive?.write(code)
-  editor.focus()
+  if (!outputMode) editor.focus()
 }
 
 editor.addEventListener('input', () => {
@@ -125,7 +127,7 @@ async function initializeLiveEditing() {
   }
   updateHighlight()
   execute()
-  editor.focus()
+  if (!outputMode) editor.focus()
 }
 
 initializeLiveEditing()

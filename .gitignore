@@ -1,0 +1,6 @@
+node_modules/
+dist/
+apps/desktop/resources/native/*.node
+*.log
+.DS_Store
+Thumbs.db

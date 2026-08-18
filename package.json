@@ -1,0 +1,11 @@
+{
+  "name": "hydra-2-touch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hydra live coding para TouchDesigner via Spout",
+  "scripts": {
+    "start": "pnpm --dir apps/desktop start",
+    "build": "pnpm --dir apps/desktop dist"
+  },
+  "packageManager": "pnpm@10.15.0"
+}

@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hydra 2 Touch</title>
   <link rel="stylesheet" href="styles.css" />
@@ -11,15 +12,29 @@
 <body>
   <main class="stage" aria-label="Hydra 2 Touch">
     <pre id="highlight" aria-hidden="true"></pre>
-    <textarea id="editor" aria-label="Código Hydra" spellcheck="false"></textarea>
+    <textarea id="editor" lang="pt-BR" aria-label="Código Hydra" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" wrap="off"></textarea>
     <nav class="actions" aria-label="Ações do Hydra Studio">
-      <button id="run" title="Executar (Ctrl + Shift + Enter)" aria-label="Executar"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
-      <button id="shuffle" title="Alternar código" aria-label="Alternar código"><svg viewBox="0 0 24 24"><path d="M16 3h5v5l-2-2-4.6 4.6-1.4-1.4L17.6 5 16 3M3 7h4.5l9 10H21v-2h-3.5l-9-10H3v2m0 10h4.5l2.7-3 1.3 1.5L8.5 19H3v-2z"/></svg></button>
+      <button id="spout" type="button" data-state="off" aria-pressed="false" title="Spout desligado">
+        <span class="dot" aria-hidden="true"></span>
+        <span>Spout</span>
+      </button>
+      <button id="save" type="button" title="Salvar sketch (Ctrl + S)" aria-label="Salvar sketch">
+        <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM15 9H5V5h10z"/></svg>
+      </button>
+      <button id="load" type="button" title="Carregar sketch (Ctrl + O)" aria-label="Carregar sketch">
+        <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+      </button>
+      <button id="shuffle" type="button" title="Próximo sketch salvo" aria-label="Próximo sketch salvo">
+        <svg viewBox="0 0 24 24"><path d="M16 3h5v5l-2-2-4.6 4.6-1.4-1.4L17.6 5 16 3M3 7h4.5l9 10H21v-2h-3.5l-9-10H3v2m0 10h4.5l2.7-3 1.3 1.5L8.5 19H3v-2z"/></svg>
+      </button>
+      <span id="sketch-name" class="sketch-name" title="Sketch atual">hydra-live.js</span>
+      <button id="run" type="button" title="Executar (Ctrl + Shift + Enter)" aria-label="Executar">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
     </nav>
     <div id="error" class="error" role="status"></div>
   </main>
   <script src="vendor/hydra-synth.js"></script>
-  <script src="renderer.js"></script>
+  <script src="renderer.js" charset="UTF-8"></script>
 </body>
 </html>
-

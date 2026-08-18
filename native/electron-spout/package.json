@@ -1,12 +1,11 @@
 {
   "name": "electron-spout",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Addon N-API Spout/DirectX 11 para Hydra 2 Touch",
   "cmake-js": {
     "runtime": "electron",
-    "runtimeVersion": "42.0.0",
+    "runtimeVersion": "42.9.1",
     "arch": "x64"
   }
 }
-

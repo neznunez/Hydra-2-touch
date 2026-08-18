@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "Hydra live coding para TouchDesigner via Spout",
+  "license": "AGPL-3.0",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "start": "pnpm --dir apps/desktop start",
     "build": "pnpm --dir apps/desktop dist"
-  },
-  "packageManager": "pnpm@10.15.0"
+  }
 }

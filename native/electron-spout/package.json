@@ -1,0 +1,12 @@
+{
+  "name": "electron-spout",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "cmake-js": {
+    "runtime": "electron",
+    "runtimeVersion": "42.0.0",
+    "arch": "x64"
+  }
+}
+

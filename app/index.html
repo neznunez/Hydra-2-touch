@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hydra Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="scrollbar.css" />
+  <link rel="stylesheet" href="quality.css" />
+</head>
+<body>
+  <main class="stage" aria-label="Hydra Studio">
+    <pre id="highlight" aria-hidden="true"></pre>
+    <textarea id="editor" aria-label="Código Hydra" spellcheck="false"></textarea>
+    <nav class="actions" aria-label="Ações do Hydra Studio">
+      <button id="run" title="Executar (Ctrl + Shift + Enter)" aria-label="Executar"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+      <button id="shuffle" title="Alternar código" aria-label="Alternar código"><svg viewBox="0 0 24 24"><path d="M16 3h5v5l-2-2-4.6 4.6-1.4-1.4L17.6 5 16 3M3 7h4.5l9 10H21v-2h-3.5l-9-10H3v2m0 10h4.5l2.7-3 1.3 1.5L8.5 19H3v-2z"/></svg></button>
+    </nav>
+    <div id="error" class="error" role="status"></div>
+  </main>
+  <script src="node_modules/hydra-synth/dist/hydra-synth.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,13 @@
+{
+  "name": "electron-spout",
+  "dependencies": [
+    {
+      "name": "spout2",
+      "default-features": true,
+      "features": [ "dx" ]
+    },
+    "node-addon-api"
+  ],
+  "supports": "windows"
+}
+

@@ -1,0 +1,9 @@
+.stage canvas {
+  width: 100% !important;
+  height: 100% !important;
+  inset: 0 !important;
+  filter: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+

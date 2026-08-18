@@ -1,0 +1,56 @@
+name: Build Electron Spout for Electron 42
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install CMake.js
+        shell: pwsh
+        run: npm install --global cmake-js@7.3.1
+
+      - name: Install native dependencies
+        shell: pwsh
+        run: vcpkg install --triplet $env:VCPKG_DEFAULT_TRIPLET
+
+      - name: Configure
+        shell: pwsh
+        run: >-
+          cmake-js configure
+          --runtime electron
+          --runtime-version 42.0.0
+          --arch x64
+          --CD CMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          --CD VCPKG_TARGET_TRIPLET="$env:VCPKG_DEFAULT_TRIPLET"
+          --CD CMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+
+      - name: Build release module
+        shell: pwsh
+        run: cmake-js build --config Release
+
+      - name: Collect artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifact
+          Copy-Item build/Release/electron-spout.node artifact/electron-spout.node
+          Copy-Item electron-spout.node.d.ts artifact/electron-spout.node.d.ts
+
+      - name: Upload module
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-spout-electron42-win-x64
+          path: artifact
+          if-no-files-found: error
+

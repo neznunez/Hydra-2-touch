@@ -100,6 +100,8 @@ function stopSpoutOutput() {
 
 function createSpoutOutput() {
   if (getSpoutStatus().active) return sendSpoutStatus()
+  createSpoutOutput.loggedGpuFallback = false
+  createSpoutOutput.loggedFrameError = false
 
   const modulePath = resolveSpoutModule()
   if (!fs.existsSync(modulePath)) {
@@ -138,18 +140,35 @@ function createSpoutOutput() {
       try {
         const textureInfo = sharedTexture?.textureInfo
         const ntHandle = textureInfo?.handle?.ntHandle
+        let sent = false
 
         if (textureInfo && ntHandle) {
-          spoutOutput.updateTexture({
-            widgetType: textureInfo.widgetType,
-            pixelFormat: textureInfo.pixelFormat,
-            sharedTextureHandle: ntHandle
-          })
-        } else {
-          spoutOutput.updateFrame(image.getBitmap(), image.getSize())
+          try {
+            spoutOutput.updateTexture({
+              widgetType: textureInfo.widgetType,
+              pixelFormat: textureInfo.pixelFormat,
+              sharedTextureHandle: ntHandle
+            })
+            sent = true
+          } catch (gpuError) {
+            if (!createSpoutOutput.loggedGpuFallback) {
+              createSpoutOutput.loggedGpuFallback = true
+              console.warn('Spout GPU falhou; usando copia por CPU.', gpuError.message)
+            }
+          }
+        }
+
+        if (!sent) {
+          const size = image.getSize()
+          if (size.width > 0 && size.height > 0) {
+            spoutOutput.updateFrame(image.toBitmap(), size)
+          }
         }
       } catch (error) {
-        console.error('Falha ao enviar frame para o Spout:', error)
+        if (!createSpoutOutput.loggedFrameError) {
+          createSpoutOutput.loggedFrameError = true
+          console.error('Falha ao enviar frame para o Spout:', error)
+        }
       } finally {
         sharedTexture?.release()
       }
@@ -185,13 +204,21 @@ function sketchInfo(filePath = currentSketchPath) {
   return { name: path.basename(filePath), path: filePath, saved: true }
 }
 
+function broadcastLiveCode(code, exceptWebContents) {
+  const payload = String(code)
+  for (const window of [studioWindow, spoutWindow]) {
+    if (!window || window.isDestroyed()) continue
+    if (exceptWebContents && window.webContents.id === exceptWebContents.id) continue
+    window.webContents.send('live-code:changed', payload)
+  }
+}
+
 function applySketch(filePath) {
   const code = readUtf8(filePath)
   currentSketchPath = filePath
   lastContents = code
   writeUtf8(liveFile, code)
-  studioWindow?.webContents.send('live-code:changed', code)
-  spoutWindow?.webContents.send('live-code:changed', code)
+  broadcastLiveCode(code)
   return { code, ...sketchInfo(filePath) }
 }
 
@@ -282,8 +309,7 @@ function createWindow() {
       const contents = readUtf8(liveFile)
       if (contents !== lastContents) {
         lastContents = contents
-        studioWindow?.webContents.send('live-code:changed', contents)
-        spoutWindow?.webContents.send('live-code:changed', contents)
+        broadcastLiveCode(contents)
       }
     } catch {}
   })
@@ -294,9 +320,10 @@ ipcMain.handle('live-code:read', () => {
   return readUtf8(liveFile)
 })
 
-ipcMain.handle('live-code:write', (_event, code) => {
+ipcMain.handle('live-code:write', (event, code) => {
   lastContents = String(code)
   writeUtf8(liveFile, lastContents)
+  broadcastLiveCode(lastContents, event.sender)
   return true
 })
 

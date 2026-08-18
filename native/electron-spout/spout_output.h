@@ -1,7 +1,3 @@
-//
-// Created by reito on 2023/6/26.
-//
-
 #ifndef ELECTRON_SPOUT_SPOUT_OUTPUT_H
 #define ELECTRON_SPOUT_SPOUT_OUTPUT_H
 
@@ -28,13 +24,14 @@ private:
     ID3D11Device1* device1 = nullptr;
     ID3D11DeviceContext* context = nullptr;
 
-    ID3D11Texture2D* texture = nullptr;
+    ID3D11Texture2D* staging = nullptr;
+    ID3D11Texture2D* senderTexture = nullptr;
     int texWidth = 0;
     int texHeight = 0;
     void InitializeDevice();
-    void EnsureStagingTexture(int width, int height);
+    void EnsureTextures(int width, int height);
+    bool SendOrThrow(ID3D11Texture2D* texture);
 };
 
 
-#endif//ELECTRON_SPOUT_SPOUT_OUTPUT_H
-
+#endif

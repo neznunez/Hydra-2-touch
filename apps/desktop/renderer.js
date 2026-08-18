@@ -54,6 +54,7 @@ function execute() {
     new Function(editor.value)()
     localStorage.setItem('hydra-studio-code', editor.value)
     error.textContent = ''
+    if (!outputMode) window.hydraLive?.write(editor.value)
   } catch (exception) {
     error.textContent = exception.message
   }
@@ -63,7 +64,6 @@ function setCode(code) {
   editor.value = code
   updateHighlight()
   execute()
-  window.hydraLive?.write(code)
   if (!outputMode) editor.focus()
 }
 
@@ -107,10 +107,7 @@ editor.addEventListener('compositionend', () => {
 editor.addEventListener('input', () => {
   if (!composing) updateHighlight()
   clearTimeout(timer)
-  timer = setTimeout(() => {
-    execute()
-    window.hydraLive?.write(editor.value)
-  }, 500)
+  timer = setTimeout(execute, 500)
 })
 editor.addEventListener('scroll', updateHighlight)
 editor.addEventListener('keydown', event => {

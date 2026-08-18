@@ -20,6 +20,7 @@
     "asar": true,
     "files": [
       "main.js",
+      "codex-app-server.js",
       "preload.js",
       "index.html",
       "renderer.js",
@@ -43,4 +44,3 @@
     }
   }
 }
-

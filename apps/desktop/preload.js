@@ -28,3 +28,15 @@ contextBridge.exposeInMainWorld('hydraSketches', {
   open: () => ipcRenderer.invoke('sketches:open'),
   next: () => ipcRenderer.invoke('sketches:next')
 })
+
+contextBridge.exposeInMainWorld('hydraCodex', {
+  status: () => ipcRenderer.invoke('codex:status'),
+  login: () => ipcRenderer.invoke('codex:login'),
+  transformSketch: (instruction, sketch) => ipcRenderer.invoke('codex:transform-sketch', { instruction, sketch }),
+  newThread: () => ipcRenderer.invoke('codex:new-thread'),
+  subscribe: callback => {
+    const listener = (_event, update) => callback(update)
+    ipcRenderer.on('codex:event', listener)
+    return () => ipcRenderer.removeListener('codex:event', listener)
+  }
+})

@@ -32,6 +32,22 @@
         <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       </button>
     </nav>
+    <aside id="codex-panel" class="codex-panel" aria-label="Codex para sketches" aria-hidden="true">
+      <div class="codex-header">
+        <span>codex://hydra</span>
+        <span id="codex-state" class="codex-state" data-state="idle">offline</span>
+      </div>
+      <div id="codex-log" class="codex-log" role="log" aria-live="polite">
+        <div class="codex-message system"><span class="terminal-prefix">//</span> descreva uma alteração no visual</div>
+      </div>
+      <label class="codex-prompt" for="codex-input">
+        <span class="terminal-prefix">&gt;</span>
+        <textarea id="codex-input" rows="1" maxlength="4000" spellcheck="false" autocomplete="off" aria-label="Pedido para o Codex"></textarea>
+        <span class="terminal-caret" aria-hidden="true"></span>
+      </label>
+      <div class="codex-shortcuts">enter envia · shift+enter quebra linha · esc fecha</div>
+    </aside>
+    <div id="codex-hint" class="codex-hint" aria-hidden="true"><span>codex_</span><span>ctrl+k</span></div>
     <div id="error" class="error" role="status"></div>
   </main>
   <script src="vendor/hydra-synth.js"></script>

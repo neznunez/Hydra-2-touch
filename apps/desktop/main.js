@@ -1,6 +1,7 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const { CodexAppServer } = require('./codex-app-server')
 
 app.commandLine.appendSwitch('high-dpi-support', '1')
 app.commandLine.appendSwitch('force_high_performance_gpu')
@@ -10,6 +11,7 @@ let spoutWindow
 let spoutOutput
 let lastContents = ''
 let currentSketchPath = null
+let codexServer
 
 const liveArgument = process.argv.find(argument => argument.startsWith('--live-file='))
 const appDocuments = path.join(app.getPath('documents'), 'Hydra 2 Touch')
@@ -88,6 +90,16 @@ function sendSpoutStatus() {
   const status = getSpoutStatus()
   studioWindow?.webContents.send('spout:status', status)
   return status
+}
+
+function getCodexServer() {
+  if (!codexServer) {
+    codexServer = new CodexAppServer({
+      cwd: appDocuments,
+      onEvent: event => studioWindow?.webContents.send('codex:event', event)
+    })
+  }
+  return codexServer
 }
 
 function stopSpoutOutput() {
@@ -342,9 +354,40 @@ ipcMain.handle('sketches:save-as', (_event, code) => saveSketch(code, true))
 ipcMain.handle('sketches:open', () => openSketch())
 ipcMain.handle('sketches:next', () => nextSketch())
 
+ipcMain.handle('codex:status', async () => {
+  const server = getCodexServer()
+  try {
+    await server.start()
+  } catch {}
+  return server.status
+})
+ipcMain.handle('codex:login', async () => {
+  const result = await getCodexServer().login()
+  const authUrl = result?.authUrl || result?.verificationUrl
+  if (authUrl) await shell.openExternal(authUrl)
+  return {
+    type: result?.type,
+    userCode: result?.userCode || null,
+    opened: Boolean(authUrl)
+  }
+})
+ipcMain.handle('codex:transform-sketch', async (_event, request) => {
+  const instruction = String(request?.instruction || '').trim()
+  const sketch = String(request?.sketch || '')
+  if (!instruction) throw new Error('Digite o que deseja alterar no visual.')
+  if (!sketch.trim()) throw new Error('O sketch atual está vazio.')
+  if (instruction.length > 4000 || sketch.length > 100000) throw new Error('O pedido ou sketch é grande demais.')
+  return getCodexServer().transformSketch(instruction, sketch)
+})
+ipcMain.handle('codex:new-thread', () => {
+  getCodexServer().newThread()
+  return true
+})
+
 app.whenReady().then(createWindow)
 app.on('window-all-closed', () => {
   fs.unwatchFile(liveFile)
+  codexServer?.stop()
   stopSpoutOutput()
   app.quit()
 })

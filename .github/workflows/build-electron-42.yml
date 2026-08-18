@@ -10,7 +10,7 @@ jobs:
       run:
         working-directory: native/electron-spout
     env:
-      VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+      VCPKG_DEFAULT_TRIPLET: x64-windows
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,6 +37,7 @@ jobs:
           --arch x64
           --CDCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
           --CDVCPKG_TARGET_TRIPLET=$env:VCPKG_DEFAULT_TRIPLET
+          --CDCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
 
       - name: Build release module
         shell: pwsh

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, session, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { CodexAppServer } = require('./codex-app-server')
@@ -12,6 +12,7 @@ let spoutOutput
 let lastContents = ''
 let currentSketchPath = null
 let codexServer
+let mediaState = { audio: true, camera: false }
 
 const liveArgument = process.argv.find(argument => argument.startsWith('--live-file='))
 const appDocuments = path.join(app.getPath('documents'), 'Hydra 2 Touch')
@@ -58,6 +59,29 @@ shape(6, 0.35, 0.02)
   .modulate(noise(2, 0.08), 0.2)
   .color(0.2, 0.8, 1)
   .diff(osc(12, 0.02, 1.4))
+  .out(o0)
+`
+  },
+  {
+    name: 'audio.js',
+    code: `// audio-reativo — ligue o botão Áudio
+a.setBins(4)
+a.setSmooth(0.8)
+osc(8, 0.05, () => 1.2 + a.fft[0] * 3)
+  .kaleid(() => 3 + Math.floor(a.fft[1] * 6))
+  .modulate(noise(2, () => 0.04 + a.fft[2] * 0.4), () => 0.1 + a.fft[0] * 0.6)
+  .colorama(() => a.fft[3] * 0.4)
+  .scale(() => 0.85 + a.fft[0] * 0.4)
+  .out(o0)
+`
+  },
+  {
+    name: 'camera.js',
+    code: `// câmera — ligue o botão Câmera
+src(s0)
+  .modulate(osc(6, 0.08, 1.2), 0.12)
+  .colorama(0.08)
+  .blend(src(o0), 0.7)
   .out(o0)
 `
   }
@@ -204,10 +228,30 @@ function listSketchFiles() {
 
 function ensureSketchesDir() {
   fs.mkdirSync(sketchesDir, { recursive: true })
-  if (listSketchFiles().length === 0) {
-    for (const sketch of defaultSketches) {
-      writeUtf8(path.join(sketchesDir, sketch.name), sketch.code)
-    }
+  for (const sketch of defaultSketches) {
+    const filePath = path.join(sketchesDir, sketch.name)
+    if (!fs.existsSync(filePath)) writeUtf8(filePath, sketch.code)
+  }
+}
+
+function broadcastMediaState() {
+  const payload = { ...mediaState }
+  for (const window of [studioWindow, spoutWindow]) {
+    if (!window || window.isDestroyed()) continue
+    window.webContents.send('media:changed', payload)
+  }
+  return payload
+}
+
+function allowMediaPermissions(session) {
+  session.setPermissionRequestHandler((_webContents, permission, callback) => {
+    callback(permission === 'media' || permission === 'mediaKeySystem' || permission === 'display-capture')
+  })
+  session.setPermissionCheckHandler((_webContents, permission) => {
+    return permission === 'media' || permission === 'clipboard-sanitized-write' || permission === 'display-capture'
+  })
+  if (typeof session.setDevicePermissionHandler === 'function') {
+    session.setDevicePermissionHandler(() => true)
   }
 }
 
@@ -243,8 +287,11 @@ async function saveSketch(code, saveAs) {
   let target = saveAs ? null : currentSketchPath
   if (!target) {
     const result = await dialog.showSaveDialog(studioWindow, {
-      title: 'Salvar sketch',
-      defaultPath: path.join(sketchesDir, currentSketchPath ? path.basename(currentSketchPath) : 'sketch.js'),
+      title: saveAs ? 'Salvar como novo projeto' : 'Salvar projeto',
+      defaultPath: path.join(
+        sketchesDir,
+        saveAs || !currentSketchPath ? 'projeto.js' : path.basename(currentSketchPath)
+      ),
       filters: [{ name: 'Hydra', extensions: ['js'] }]
     })
     if (result.canceled || !result.filePath) return null
@@ -292,6 +339,7 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
       spellcheck: false,
       preload: path.join(__dirname, 'preload.js')
     }
@@ -353,6 +401,12 @@ ipcMain.handle('sketches:save', (_event, code) => saveSketch(code, false))
 ipcMain.handle('sketches:save-as', (_event, code) => saveSketch(code, true))
 ipcMain.handle('sketches:open', () => openSketch())
 ipcMain.handle('sketches:next', () => nextSketch())
+ipcMain.handle('media:status', () => ({ ...mediaState }))
+ipcMain.handle('media:set', (_event, next) => {
+  if (next && typeof next.audio === 'boolean') mediaState.audio = next.audio
+  if (next && typeof next.camera === 'boolean') mediaState.camera = next.camera
+  return broadcastMediaState()
+})
 
 ipcMain.handle('codex:status', async () => {
   const server = getCodexServer()
@@ -384,7 +438,10 @@ ipcMain.handle('codex:new-thread', () => {
   return true
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  allowMediaPermissions(session.defaultSession)
+  createWindow()
+})
 app.on('window-all-closed', () => {
   fs.unwatchFile(liveFile)
   codexServer?.stop()

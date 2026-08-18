@@ -21,15 +21,23 @@ Arquivo ao vivo padrão: `Documentos\Hydra 2 Touch\hydra-live.js`. Qualquer edit
 | Atalho | Ação |
 | --- | --- |
 | `Ctrl + Shift + Enter` | Executar agora |
-| `Ctrl + S` | Salvar sketch |
-| `Ctrl + O` | Carregar sketch |
+| `Ctrl + S` | Salvar o projeto atual |
+| `Ctrl + Shift + S` | Salvar como novo projeto |
+| `Ctrl + Z` | Desfazer |
+| `Ctrl + Shift + Z` ou `Ctrl + Y` | Refazer |
+| `Ctrl + O` | Carregar projeto |
+| `Ctrl + K` | Abrir ou fechar o chat Codex |
 | `Shift + F` | Tela cheia |
 | `F11` | Mostrar ou ocultar o código |
 | `Tab` | Inserir dois espaços |
 
 O ponto **Spout** liga ou desliga o sender. Verde: enviando. Cinza: desligado. Vermelho: módulo nativo ausente.
 
-Salvar e carregar usam `Documentos\Hydra 2 Touch\sketches\`. O shuffle percorre os `.js` dessa pasta e o nome do arquivo aparece ao lado. Na primeira abertura, três sketches de exemplo são criados aí.
+O ícone de **microfone** fica cinza desligado, amarelo a abrir, verde ligado e **pulsa com o volume** quando o mic capta som. A **câmera** fica verde quando `s0` está ativo. No sketch: `a.fft[0]`–`a.fft[3]` e `src(s0)`. O Windows pode pedir permissão em Configurações > Privacidade > Microfone e Câmera.
+
+**Salvar** grava as edições no projeto aberto. **Salvar como** cria um `.js` novo em `Documentos\Hydra 2 Touch\sketches\`. O nome com `*` indica alterações por gravar. Shuffle e carregar recomeçam o chat Codex naquele projeto.
+
+Há exemplos em `sketches\audio.js` e `sketches\camera.js` (criados se ainda não existirem).
 
 ## Como funciona
 

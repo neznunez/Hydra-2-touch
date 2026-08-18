@@ -28,18 +28,80 @@
   text-transform: uppercase;
 }
 
-#spout .dot {
+#audio,
+#camera {
+  position: relative;
+}
+
+#spout .dot,
+#audio .dot,
+#camera .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #8a8a8a;
 }
 
-#spout[data-state="on"] .dot {
+#audio .dot,
+#camera .dot {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+}
+
+#spout[data-state="on"] .dot,
+#audio[data-state="on"] .dot,
+#audio[data-state="live"] .dot,
+#camera[data-state="on"] .dot {
   background: #5dffa1;
 }
 
-#spout[data-state="off"] .dot {
+#audio[data-state="starting"] .dot {
+  background: #e3c87a;
+  animation: audio-wait 1s ease-in-out infinite;
+}
+
+#audio[data-state="live"] svg {
+  color: #5dffa1;
+}
+
+.audio-meter {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 22px;
+  padding: 0 2px 2px;
+  filter: drop-shadow(0 1px 2px #000);
+}
+
+.audio-meter[hidden] {
+  display: none;
+}
+
+.audio-bar {
+  width: 4px;
+  height: 22px;
+  border-radius: 1px;
+  background: #5dffa1;
+  transform: scaleY(0.08);
+  transform-origin: bottom center;
+  opacity: 0.95;
+}
+
+#audio[data-state="on"] svg {
+  color: #8ee5a4;
+}
+
+#camera[data-state="on"] svg {
+  color: #5dffa1;
+}
+
+#spout[data-state="off"] .dot,
+#audio[data-state="off"] .dot,
+#camera[data-state="off"] .dot {
   background: #8a8a8a;
 }
 
@@ -50,6 +112,16 @@
 #spout[data-state="missing"] {
   opacity: 0.45;
   cursor: default;
+}
+
+.sketch-name.is-dirty::after {
+  content: " *";
+  color: #e3c87a;
+}
+
+@keyframes audio-wait {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
 }
 
 .sketch-name {
@@ -78,7 +150,9 @@
     height: calc(100vh - 82px);
   }
 
-  #spout {
+  #spout,
+  #audio,
+  #camera {
     height: 24px;
   }
 }

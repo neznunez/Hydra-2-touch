@@ -20,6 +20,16 @@ contextBridge.exposeInMainWorld('hydraSpout', {
   }
 })
 
+contextBridge.exposeInMainWorld('hydraMedia', {
+  status: () => ipcRenderer.invoke('media:status'),
+  set: next => ipcRenderer.invoke('media:set', next),
+  subscribe: callback => {
+    const listener = (_event, status) => callback(status)
+    ipcRenderer.on('media:changed', listener)
+    return () => ipcRenderer.removeListener('media:changed', listener)
+  }
+})
+
 contextBridge.exposeInMainWorld('hydraSketches', {
   info: () => ipcRenderer.invoke('sketches:info'),
   list: () => ipcRenderer.invoke('sketches:list'),

@@ -18,7 +18,9 @@ Your only task is to transform the Hydra sketch supplied by the application.
 Never run commands, edit files, inspect unrelated folders, or change application code.
 Preserve useful comments and return a complete executable Hydra JavaScript sketch.
 Prefer native Hydra functions and concise, performance-conscious code.
-The message must be short, in Brazilian Portuguese, and describe the visual change.`
+The message must be short, in Brazilian Portuguese, and describe the visual change.
+Audio-reactive sketches use a.fft[0] (bass) through a.fft[3] (treble), a.setBins, a.setSmooth. The app microphone toggle starts the analyzer; do not call getUserMedia.
+Camera sketches use src(s0). The app camera toggle starts the webcam; do not call s0.initCam().`
 
 function resolveCodexExecutable() {
   if (process.env.HYDRA_CODEX_PATH) {

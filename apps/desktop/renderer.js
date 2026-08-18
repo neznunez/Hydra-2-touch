@@ -13,6 +13,10 @@ const editor = document.querySelector('#editor')
 const highlight = document.querySelector('#highlight')
 const error = document.querySelector('#error')
 const spoutButton = document.querySelector('#spout')
+const audioButton = document.querySelector('#audio')
+const audioMeter = document.querySelector('#audio-meter')
+const audioBars = [...document.querySelectorAll('.audio-bar')]
+const cameraButton = document.querySelector('#camera')
 const sketchName = document.querySelector('#sketch-name')
 const codexPanel = document.querySelector('#codex-panel')
 const codexInput = document.querySelector('#codex-input')
@@ -21,9 +25,17 @@ const codexState = document.querySelector('#codex-state')
 let timer
 let composing = false
 let spoutActive = false
+let mediaState = { audio: false, camera: false }
+let audioReady = false
+let cameraReady = false
 let codexOpen = false
 let codexBusy = false
 let codeAnimationId = 0
+let history = []
+let historyIndex = -1
+let applyingHistory = false
+let savedCode = ''
+let audioMeterFrame = 0
 
 editor.value = 'osc(10, 0.1, 1.2).out(o0)\n'
 
@@ -56,12 +68,57 @@ function updateHighlight() {
   highlight.scrollLeft = editor.scrollLeft
 }
 
+function rememberCode(code = editor.value) {
+  if (applyingHistory || outputMode) return
+  if (history[historyIndex] === code) return
+  history = history.slice(0, historyIndex + 1)
+  history.push(code)
+  if (history.length > 80) history.shift()
+  historyIndex = history.length - 1
+}
+
+function updateDirty() {
+  if (!sketchName) return
+  sketchName.classList.toggle('is-dirty', editor.value !== savedCode)
+}
+
+function applyHistory(code) {
+  applyingHistory = true
+  editor.value = code
+  updateHighlight()
+  execute()
+  updateDirty()
+  applyingHistory = false
+  if (!outputMode) editor.focus()
+}
+
+function undoCode() {
+  if (historyIndex <= 0) return
+  historyIndex -= 1
+  applyHistory(history[historyIndex])
+}
+
+function redoCode() {
+  if (historyIndex >= history.length - 1) return
+  historyIndex += 1
+  applyHistory(history[historyIndex])
+}
+
+function resetCodexChat() {
+  window.hydraCodex?.newThread()
+  if (!codexLog) return
+  codexLog.replaceChildren()
+  addCodexMessage('system', 'nova conversa neste projeto')
+}
+
 function execute({ quiet = false } = {}) {
   try {
     new Function(editor.value)()
     localStorage.setItem('hydra-studio-code', editor.value)
     error.textContent = ''
     if (!outputMode) window.hydraLive?.write(editor.value)
+    rememberCode()
+    updateDirty()
     return true
   } catch (exception) {
     if (!quiet) error.textContent = exception.message
@@ -69,10 +126,14 @@ function execute({ quiet = false } = {}) {
   }
 }
 
-function setCode(code) {
+function setCode(code, { resetChat = false } = {}) {
+  rememberCode(editor.value)
   editor.value = code
+  savedCode = code
   updateHighlight()
   execute()
+  updateDirty()
+  if (resetChat) resetCodexChat()
   if (!outputMode) editor.focus()
 }
 
@@ -80,6 +141,7 @@ function setSketchLabel(info) {
   if (!sketchName || !info) return
   sketchName.textContent = info.name || 'hydra-live.js'
   sketchName.title = info.path || info.name || ''
+  updateDirty()
 }
 
 function wait(milliseconds) {
@@ -163,6 +225,7 @@ async function setCodexOpen(open) {
 async function animateCodeChange(nextCode) {
   const before = editor.value
   if (before === nextCode) return
+  rememberCode(before)
   try {
     new Function(nextCode)
   } catch (exception) {
@@ -269,6 +332,147 @@ function applySpoutStatus(status) {
       : 'Spout desligado. Clique para enviar ao TouchDesigner.'
 }
 
+function applyMediaButton(button, enabled, onTitle, offTitle) {
+  if (!button) return
+  button.dataset.state = enabled ? 'on' : 'off'
+  button.setAttribute('aria-pressed', enabled ? 'true' : 'false')
+  button.title = enabled ? onTitle : offTitle
+}
+
+function stopAudioMeter() {
+  cancelAnimationFrame(audioMeterFrame)
+  audioMeterFrame = 0
+  audioButton?.style.removeProperty('--level')
+  if (audioMeter) {
+    audioMeter.hidden = true
+    audioMeter.setAttribute('aria-hidden', 'true')
+  }
+  for (const bar of audioBars) bar.style.transform = 'scaleY(0.08)'
+}
+
+function updateAudioMeter() {
+  stopAudioMeter()
+  if (!mediaState.audio || !audioButton) return
+  if (audioMeter) {
+    audioMeter.hidden = false
+    audioMeter.setAttribute('aria-hidden', 'false')
+  }
+  const tick = () => {
+    if (!mediaState.audio || !audioButton) return
+    const audio = hydra.synth.a
+    const live = Boolean(audio?.meyda || audio?.stream)
+    const bins = Array.isArray(audio?.fft) ? audio.fft : [0, 0, 0, 0]
+    const vol = Math.min(1, Number(audio?.vol || 0) / 10)
+    const levels = [0, 1, 2, 3].map(index => (
+      Math.min(1, Math.max(vol * 0.45, Number(bins[index] || 0) * 2.4))
+    ))
+    const peak = Math.max(vol, ...levels)
+    for (const [index, bar] of audioBars.entries()) {
+      bar.style.transform = `scaleY(${Math.max(0.08, levels[index] || 0).toFixed(3)})`
+    }
+    audioButton.dataset.state = live ? (peak > 0.04 ? 'live' : 'on') : 'starting'
+    audioButton.style.setProperty('--level', peak.toFixed(3))
+    audioButton.setAttribute('aria-pressed', 'true')
+    audioButton.title = live
+      ? (peak > 0.04
+        ? 'Microfone captando som. Clique para desligar.'
+        : 'Microfone ligado, sem sinal. Fale perto do mic. Clique para desligar.')
+      : 'Abrindo o microfone...'
+    audioMeterFrame = requestAnimationFrame(tick)
+  }
+  tick()
+}
+
+function installAudioStub() {
+  const fft = [0, 0, 0, 0]
+  const stub = {
+    fft,
+    bins: fft,
+    vol: 0,
+    setBins() {},
+    setSmooth() {},
+    setCutoff() {},
+    setScale() {},
+    hide() {},
+    show() {},
+    tick() {},
+    onBeat() {}
+  }
+  hydra.synth.a = stub
+  window.a = stub
+}
+
+function hideAudioMeter(audio) {
+  if (!audio) return
+  audio.hide?.()
+  if (audio.canvas) audio.canvas.style.display = 'none'
+}
+
+function setAudioEnabled(enabled) {
+  if (enabled) {
+    if (!audioReady) {
+      hydra._initAudio()
+      audioReady = true
+    }
+    hydra.detectAudio = true
+    window.a = hydra.synth.a
+    hideAudioMeter(hydra.synth.a)
+    return
+  }
+  hydra.detectAudio = false
+  const audio = hydra.synth.a
+  audio?.stream?.getTracks?.().forEach(track => track.stop())
+  if (audio?.meyda?.stop) audio.meyda.stop()
+  audioReady = false
+  installAudioStub()
+}
+
+function setCameraEnabled(enabled) {
+  const source = hydra.s?.[0] || window.s0
+  if (!source) return
+  if (enabled) {
+    source.clear?.()
+    source.initCam()
+    cameraReady = true
+    return
+  }
+  source.clear?.()
+  cameraReady = false
+}
+
+function applyMediaState(status) {
+  if (!status) return
+  const audio = Boolean(status.audio)
+  const camera = Boolean(status.camera)
+  let rerun = false
+  if (audio !== mediaState.audio || (audio && !audioReady)) {
+    setAudioEnabled(audio)
+    if (audio) rerun = true
+  }
+  if (camera !== mediaState.camera || (camera && !cameraReady)) {
+    setCameraEnabled(camera)
+    if (camera) rerun = true
+  }
+  mediaState = { audio, camera }
+  if (audio) updateAudioMeter()
+  else {
+    stopAudioMeter()
+    applyMediaButton(
+      audioButton,
+      false,
+      '',
+      'Áudio desligado. Clique para usar o microfone em sketches reativos.'
+    )
+  }
+  applyMediaButton(
+    cameraButton,
+    camera,
+    'Câmera ativa em s0. Clique para desligar.',
+    'Câmera desligada. Clique para enviar a webcam para s0.'
+  )
+  if (rerun) execute({ quiet: true })
+}
+
 async function refreshSketchLabel() {
   try {
     setSketchLabel(await window.hydraSketches?.info())
@@ -324,7 +528,21 @@ if (!outputMode) {
   document.querySelector('#save').onclick = async () => {
     try {
       const info = await window.hydraSketches?.save(editor.value)
-      if (info) setSketchLabel(info)
+      if (info) {
+        savedCode = editor.value
+        setSketchLabel(info)
+      }
+    } catch (exception) {
+      error.textContent = exception.message
+    }
+  }
+  document.querySelector('#save-as').onclick = async () => {
+    try {
+      const info = await window.hydraSketches?.saveAs(editor.value)
+      if (info) {
+        savedCode = editor.value
+        setSketchLabel(info)
+      }
     } catch (exception) {
       error.textContent = exception.message
     }
@@ -333,7 +551,7 @@ if (!outputMode) {
     try {
       const sketch = await window.hydraSketches?.open()
       if (sketch?.code != null) {
-        setCode(sketch.code)
+        setCode(sketch.code, { resetChat: true })
         setSketchLabel(sketch)
       }
     } catch (exception) {
@@ -344,7 +562,7 @@ if (!outputMode) {
     try {
       const sketch = await window.hydraSketches?.next()
       if (sketch?.code != null) {
-        setCode(sketch.code)
+        setCode(sketch.code, { resetChat: true })
         setSketchLabel(sketch)
       } else {
         error.textContent = 'Nenhum sketch salvo em Documentos/Hydra 2 Touch/sketches'
@@ -358,9 +576,27 @@ if (!outputMode) {
     applySpoutStatus(await window.hydraSpout?.setEnabled(!spoutActive))
   }
   window.hydraSpout?.subscribe(applySpoutStatus)
+  audioButton.onclick = async () => {
+    applyMediaState(await window.hydraMedia?.set({ audio: !mediaState.audio }))
+  }
+  cameraButton.onclick = async () => {
+    applyMediaState(await window.hydraMedia?.set({ camera: !mediaState.camera }))
+  }
 }
 
 window.addEventListener('keydown', event => {
+  if (event.target === codexInput) return
+  if (event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'z') {
+    event.preventDefault()
+    if (event.shiftKey) redoCode()
+    else undoCode()
+    return
+  }
+  if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'y') {
+    event.preventDefault()
+    redoCode()
+    return
+  }
   if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
     event.preventDefault()
     setCodexOpen(!codexOpen)
@@ -369,6 +605,11 @@ window.addEventListener('keydown', event => {
   if (event.ctrlKey && event.shiftKey && event.key === 'Enter') {
     event.preventDefault()
     execute()
+  }
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
+    event.preventDefault()
+    if (!outputMode) document.querySelector('#save-as')?.click()
+    return
   }
   if (event.ctrlKey && event.key.toLowerCase() === 's') {
     event.preventDefault()
@@ -390,23 +631,31 @@ window.addEventListener('keydown', event => {
 })
 
 async function initializeLiveEditing() {
+  installAudioStub()
   try {
     const liveCode = await window.hydraLive?.read()
     if (liveCode) editor.value = liveCode
     window.hydraLive?.subscribe(code => {
       if (code === editor.value) return
+      rememberCode(editor.value)
       editor.value = code
+      savedCode = code
       updateHighlight()
       execute()
       refreshSketchLabel()
     })
+    window.hydraMedia?.subscribe(applyMediaState)
+    applyMediaState(await window.hydraMedia?.status())
     applySpoutStatus(await window.hydraSpout?.status())
     await refreshSketchLabel()
   } catch (exception) {
     error.textContent = `Arquivo ao vivo: ${exception.message}`
   }
   updateHighlight()
+  savedCode = editor.value
+  rememberCode(editor.value)
   execute()
+  updateDirty()
   if (!outputMode) editor.focus()
 }
 

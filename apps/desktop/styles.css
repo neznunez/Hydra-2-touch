@@ -29,13 +29,15 @@
 }
 
 #audio,
-#camera {
+#camera,
+#remote {
   position: relative;
 }
 
 #spout .dot,
 #audio .dot,
-#camera .dot {
+#camera .dot,
+#remote .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -43,7 +45,8 @@
 }
 
 #audio .dot,
-#camera .dot {
+#camera .dot,
+#remote .dot {
   position: absolute;
   right: 0;
   bottom: 1px;
@@ -55,11 +58,14 @@
 #spout[data-state="on"] .dot,
 #audio[data-state="on"] .dot,
 #audio[data-state="live"] .dot,
-#camera[data-state="on"] .dot {
+#camera[data-state="on"] .dot,
+#remote[data-state="on"] .dot,
+#remote[data-state="live"] .dot {
   background: #5dffa1;
 }
 
-#audio[data-state="starting"] .dot {
+#audio[data-state="starting"] .dot,
+#remote[data-state="wait"] .dot {
   background: #e3c87a;
   animation: audio-wait 1s ease-in-out infinite;
 }
@@ -101,7 +107,8 @@
 
 #spout[data-state="off"] .dot,
 #audio[data-state="off"] .dot,
-#camera[data-state="off"] .dot {
+#camera[data-state="off"] .dot,
+#remote[data-state="off"] .dot {
   background: #8a8a8a;
 }
 
@@ -122,6 +129,18 @@
 @keyframes audio-wait {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 1; }
+}
+
+#fullscreen .icon-compress {
+  display: none;
+}
+
+#fullscreen[aria-pressed="true"] .icon-expand {
+  display: none;
+}
+
+#fullscreen[aria-pressed="true"] .icon-compress {
+  display: block;
 }
 
 .sketch-name {
@@ -152,7 +171,8 @@
 
   #spout,
   #audio,
-  #camera {
+  #camera,
+  #remote {
     height: 24px;
   }
 }
@@ -290,7 +310,8 @@ body.codex-open .codex-hint { opacity: 0; }
 body.codex-editing #editor::selection { background: rgba(226, 130, 85, 0.76); }
 body.codex-typing #highlight { filter: drop-shadow(0 0 5px rgba(99, 212, 220, 0.2)); }
 body.output-mode .codex-panel,
-body.output-mode .codex-hint { display: none !important; }
+body.output-mode .codex-hint,
+body.output-mode .remote-panel { display: none !important; }
 
 @keyframes terminal-blink {
   0%, 52% { opacity: 1; }
@@ -305,5 +326,106 @@ body.output-mode .codex-hint { display: none !important; }
   }
 
   .codex-hint { right: 18px; }
+}
+
+.remote-panel {
+  position: absolute;
+  z-index: 12;
+  top: 56px;
+  left: 18px;
+  display: grid;
+  gap: 10px;
+  width: min(280px, calc(100vw - 36px));
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(5, 7, 10, 0.92);
+  color: #fff;
+  font: 12px/1.4 "Cascadia Mono", Consolas, "Courier New", monospace;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.remote-panel[hidden] {
+  display: none;
+}
+
+.remote-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.remote-head strong {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#remote-state {
+  flex: 1;
+  color: #e3c87a;
+}
+
+#remote[data-state="on"] ~ * #remote-state,
+.remote-panel.is-live #remote-state {
+  color: #5dffa1;
+}
+
+#remote-hide,
+#remote-stop,
+#remote-copy {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+#remote-hide {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+#remote-stop,
+#remote-copy {
+  justify-self: start;
+  padding: 0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+#remote-copy[hidden] {
+  display: none;
+}
+
+#remote-qr {
+  width: 220px;
+  height: 220px;
+  padding: 8px;
+  background: #fff;
+  image-rendering: pixelated;
+}
+
+#remote-url {
+  margin: 0;
+  overflow: hidden;
+  word-break: break-all;
+  color: #a9d6a7;
+  user-select: all;
+}
+
+.remote-help {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+#remote[data-state="on"] svg,
+#remote[data-state="live"] svg {
+  color: #5dffa1;
 }
 

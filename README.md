@@ -27,13 +27,15 @@ Arquivo ao vivo padrão: `Documentos\Hydra 2 Touch\hydra-live.js`. Qualquer edit
 | `Ctrl + Shift + Z` ou `Ctrl + Y` | Refazer |
 | `Ctrl + O` | Carregar projeto |
 | `Ctrl + K` | Abrir ou fechar o chat Codex |
-| `Shift + F` | Tela cheia |
+| `Shift + F` | Tela cheia (também no botão da barra) |
 | `F11` | Mostrar ou ocultar o código |
 | `Tab` | Inserir dois espaços |
 
 O ponto **Spout** liga ou desliga o sender. Verde: enviando. Cinza: desligado. Vermelho: módulo nativo ausente.
 
 O ícone de **microfone** fica cinza desligado, amarelo a abrir, verde ligado e **pulsa com o volume** quando o mic capta som. A **câmera** fica verde quando `s0` está ativo. No sketch: `a.fft[0]`–`a.fft[3]` e `src(s0)`. O Windows pode pedir permissão em Configurações > Privacidade > Microfone e Câmera.
+
+O ícone de **celular** abre um QR na mesma Wi-Fi. No telefone, o navegador vira um editor do sketch; o PC continua com o visual, Spout, microfone e câmera. O Windows pode pedir permissão de rede privada na primeira vez. Wi-Fi de convidado (isolamento de AP) não funciona.
 
 **Salvar** grava as edições no projeto aberto. **Salvar como** cria um `.js` novo em `Documentos\Hydra 2 Touch\sketches\`. O nome com `*` indica alterações por gravar. Shuffle e carregar recomeçam o chat Codex naquele projeto.
 
@@ -58,6 +60,7 @@ O addon (`electron-spout.node`) liga Spout2 estaticamente, cria um device D3D11 
 ```text
 apps/desktop/                 App Electron (UI, Hydra, empacotamento)
   main.js                     Processo principal, Spout e arquivo ao vivo
+  remote-server.js            Editor do celular na LAN (QR)
   preload.js                  Ponte IPC segura
   renderer.js                 Editor, Hydra e atalhos
   resources/native/           electron-spout.node (não versionado)

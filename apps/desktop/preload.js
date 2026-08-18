@@ -1,5 +1,15 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+contextBridge.exposeInMainWorld('hydraWindow', {
+  toggleFullscreen: () => ipcRenderer.invoke('window:fullscreen'),
+  fullscreenStatus: () => ipcRenderer.invoke('window:fullscreen-status'),
+  subscribeFullscreen: callback => {
+    const listener = (_event, active) => callback(Boolean(active))
+    ipcRenderer.on('window:fullscreen', listener)
+    return () => ipcRenderer.removeListener('window:fullscreen', listener)
+  }
+})
+
 contextBridge.exposeInMainWorld('hydraLive', {
   read: () => ipcRenderer.invoke('live-code:read'),
   write: code => ipcRenderer.invoke('live-code:write', code),
@@ -37,6 +47,16 @@ contextBridge.exposeInMainWorld('hydraSketches', {
   saveAs: code => ipcRenderer.invoke('sketches:save-as', code),
   open: () => ipcRenderer.invoke('sketches:open'),
   next: () => ipcRenderer.invoke('sketches:next')
+})
+
+contextBridge.exposeInMainWorld('hydraRemote', {
+  status: () => ipcRenderer.invoke('remote:status'),
+  setEnabled: enabled => ipcRenderer.invoke('remote:set-enabled', enabled),
+  subscribe: callback => {
+    const listener = (_event, status) => callback(status)
+    ipcRenderer.on('remote:status', listener)
+    return () => ipcRenderer.removeListener('remote:status', listener)
+  }
 })
 
 contextBridge.exposeInMainWorld('hydraCodex', {

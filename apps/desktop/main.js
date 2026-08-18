@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain, session, shell } = require('electro
 const path = require('path')
 const fs = require('fs')
 const { CodexAppServer } = require('./codex-app-server')
+const { RemoteEditorServer } = require('./remote-server')
 
 app.commandLine.appendSwitch('high-dpi-support', '1')
 app.commandLine.appendSwitch('force_high_performance_gpu')
@@ -12,6 +13,7 @@ let spoutOutput
 let lastContents = ''
 let currentSketchPath = null
 let codexServer
+let remoteServer
 let mediaState = { audio: true, camera: false }
 
 const liveArgument = process.argv.find(argument => argument.startsWith('--live-file='))
@@ -114,6 +116,23 @@ function sendSpoutStatus() {
   const status = getSpoutStatus()
   studioWindow?.webContents.send('spout:status', status)
   return status
+}
+
+function getRemoteServer() {
+  if (!remoteServer) {
+    remoteServer = new RemoteEditorServer({
+      root: path.join(__dirname, 'remote'),
+      getCode: () => lastContents,
+      setCode: code => {
+        lastContents = String(code)
+        writeUtf8(liveFile, lastContents)
+        broadcastLiveCode(lastContents)
+      },
+      getSketchName: () => sketchInfo().name,
+      onStatus: status => studioWindow?.webContents.send('remote:status', status)
+    })
+  }
+  return remoteServer
 }
 
 function getCodexServer() {
@@ -267,6 +286,7 @@ function broadcastLiveCode(code, exceptWebContents) {
     if (exceptWebContents && window.webContents.id === exceptWebContents.id) continue
     window.webContents.send('live-code:changed', payload)
   }
+  remoteServer?.pushCode(payload)
 }
 
 function applySketch(filePath) {
@@ -336,6 +356,7 @@ function createWindow() {
     backgroundColor: '#05070a',
     title: 'Hydra 2 Touch',
     autoHideMenuBar: true,
+    fullscreenable: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -345,6 +366,13 @@ function createWindow() {
     }
   })
   studioWindow.loadFile(path.join(__dirname, 'index.html'))
+  studioWindow.on('enter-full-screen', () => {
+    studioWindow.setMenuBarVisibility(false)
+    studioWindow.webContents.send('window:fullscreen', true)
+  })
+  studioWindow.on('leave-full-screen', () => {
+    studioWindow.webContents.send('window:fullscreen', false)
+  })
   if (!app.isPackaged) {
     studioWindow.webContents.on('before-input-event', (event, input) => {
       if (input.type !== 'keyDown') return
@@ -387,6 +415,12 @@ ipcMain.handle('live-code:write', (event, code) => {
   return true
 })
 
+ipcMain.handle('remote:status', () => getRemoteServer().status())
+ipcMain.handle('remote:set-enabled', async (_event, enabled) => {
+  const server = getRemoteServer()
+  return enabled ? server.start() : server.stop()
+})
+
 ipcMain.handle('spout:status', () => getSpoutStatus())
 ipcMain.handle('spout:set-enabled', (_event, enabled) => {
   return enabled ? createSpoutOutput() : stopSpoutOutput()
@@ -401,6 +435,14 @@ ipcMain.handle('sketches:save', (_event, code) => saveSketch(code, false))
 ipcMain.handle('sketches:save-as', (_event, code) => saveSketch(code, true))
 ipcMain.handle('sketches:open', () => openSketch())
 ipcMain.handle('sketches:next', () => nextSketch())
+ipcMain.handle('window:fullscreen', () => {
+  if (!studioWindow || studioWindow.isDestroyed()) return false
+  const next = !studioWindow.isFullScreen()
+  studioWindow.setFullScreen(next)
+  studioWindow.setMenuBarVisibility(false)
+  return studioWindow.isFullScreen()
+})
+ipcMain.handle('window:fullscreen-status', () => Boolean(studioWindow && !studioWindow.isDestroyed() && studioWindow.isFullScreen()))
 ipcMain.handle('media:status', () => ({ ...mediaState }))
 ipcMain.handle('media:set', (_event, next) => {
   if (next && typeof next.audio === 'boolean') mediaState.audio = next.audio
@@ -444,6 +486,7 @@ app.whenReady().then(() => {
 })
 app.on('window-all-closed', () => {
   fs.unwatchFile(liveFile)
+  remoteServer?.stop()
   codexServer?.stop()
   stopSpoutOutput()
   app.quit()

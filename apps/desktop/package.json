@@ -21,13 +21,16 @@
     "files": [
       "main.js",
       "codex-app-server.js",
+      "remote-server.js",
+      "remote-qr.js",
       "preload.js",
       "index.html",
       "renderer.js",
       "styles.css",
       "scrollbar.css",
       "quality.css",
-      "vendor/**/*"
+      "vendor/**/*",
+      "remote/**/*"
     ],
     "extraResources": [
       {

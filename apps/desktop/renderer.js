@@ -17,6 +17,13 @@ const audioButton = document.querySelector('#audio')
 const audioMeter = document.querySelector('#audio-meter')
 const audioBars = [...document.querySelectorAll('.audio-bar')]
 const cameraButton = document.querySelector('#camera')
+const remoteButton = document.querySelector('#remote')
+const remotePanel = document.querySelector('#remote-panel')
+const remoteQr = document.querySelector('#remote-qr')
+const remoteUrl = document.querySelector('#remote-url')
+const remoteState = document.querySelector('#remote-state')
+const remoteHelp = document.querySelector('#remote-help')
+const remoteCopy = document.querySelector('#remote-copy')
 const sketchName = document.querySelector('#sketch-name')
 const codexPanel = document.querySelector('#codex-panel')
 const codexInput = document.querySelector('#codex-input')
@@ -332,6 +339,56 @@ function applySpoutStatus(status) {
       : 'Spout desligado. Clique para enviar ao TouchDesigner.'
 }
 
+function setRemotePanelOpen(open) {
+  if (!remotePanel) return
+  remotePanel.hidden = !open
+}
+
+function applyRemoteStatus(status) {
+  if (!status) return
+  const enabled = Boolean(status.enabled)
+  const clients = Number(status.clients || 0)
+  const state = !enabled ? 'off' : clients > 0 ? 'live' : 'wait'
+  if (remoteButton) {
+    remoteButton.dataset.state = state
+    remoteButton.setAttribute('aria-pressed', enabled ? 'true' : 'false')
+    remoteButton.title = !enabled
+      ? 'Editor no celular. Clique para mostrar o QR.'
+      : clients > 0
+        ? 'Celular conectado. Clique para ver o QR, ou desligue no painel.'
+        : 'Aguardando o celular. Clique para ver o QR.'
+  }
+  if (remoteState) {
+    remoteState.textContent = !enabled
+      ? 'desligado'
+      : clients > 0
+        ? `${clients} ligado${clients > 1 ? 's' : ''}`
+        : 'aguardando'
+  }
+  remotePanel?.classList.toggle('is-live', clients > 0)
+  if (remoteQr) {
+    if (status.qr) {
+      remoteQr.src = status.qr
+      remoteQr.hidden = false
+    } else {
+      remoteQr.removeAttribute('src')
+      remoteQr.hidden = true
+    }
+  }
+  if (remoteUrl) {
+    const urls = status.urls?.length ? status.urls : [status.url]
+    remoteUrl.textContent = urls.filter(Boolean).join('\n')
+  }
+  if (remoteHelp) {
+    remoteHelp.textContent = status.error
+      || (enabled
+        ? 'mesma Wi-Fi do PC. se o QR falhar, cole o endereço no navegador.'
+        : 'ligue para gerar o QR.')
+  }
+  if (remoteCopy) remoteCopy.hidden = !enabled
+  if (!enabled) setRemotePanelOpen(false)
+}
+
 function applyMediaButton(button, enabled, onTitle, offTitle) {
   if (!button) return
   button.dataset.state = enabled ? 'on' : 'off'
@@ -523,6 +580,19 @@ if (!outputMode && codexInput) {
   })
 }
 
+async function toggleFullscreen() {
+  const active = await window.hydraWindow?.toggleFullscreen()
+  applyFullscreenState(active)
+}
+
+function applyFullscreenState(active = Boolean(document.fullscreenElement)) {
+  const button = document.querySelector('#fullscreen')
+  if (!button) return
+  const on = Boolean(active)
+  button.setAttribute('aria-pressed', on ? 'true' : 'false')
+  button.title = on ? 'Sair da tela cheia (Shift + F ou Esc)' : 'Tela cheia (Shift + F)'
+}
+
 if (!outputMode) {
   document.querySelector('#run').onclick = execute
   document.querySelector('#save').onclick = async () => {
@@ -582,6 +652,46 @@ if (!outputMode) {
   cameraButton.onclick = async () => {
     applyMediaState(await window.hydraMedia?.set({ camera: !mediaState.camera }))
   }
+  if (remoteButton) {
+    remoteButton.onclick = async () => {
+      const status = await window.hydraRemote?.status()
+      if (!status?.enabled) {
+        try {
+          applyRemoteStatus(await window.hydraRemote?.setEnabled(true))
+          setRemotePanelOpen(true)
+        } catch (exception) {
+          error.textContent = exception.message
+        }
+        return
+      }
+      setRemotePanelOpen(remotePanel?.hidden)
+    }
+  }
+  const hideRemote = document.querySelector('#remote-hide')
+  if (hideRemote) hideRemote.onclick = () => setRemotePanelOpen(false)
+  if (remoteCopy) {
+    remoteCopy.onclick = async () => {
+      const text = remoteUrl?.textContent?.split('\n').find(Boolean)
+      if (!text) return
+      try {
+        await navigator.clipboard.writeText(text)
+        remoteCopy.textContent = 'copiado'
+        setTimeout(() => { remoteCopy.textContent = 'copiar endereço' }, 1200)
+      } catch {
+        remoteUrl?.focus()
+      }
+    }
+  }
+  const stopRemote = document.querySelector('#remote-stop')
+  if (stopRemote) {
+    stopRemote.onclick = async () => {
+      applyRemoteStatus(await window.hydraRemote?.setEnabled(false))
+    }
+  }
+  window.hydraRemote?.subscribe(applyRemoteStatus)
+  document.querySelector('#fullscreen').onclick = toggleFullscreen
+  window.hydraWindow?.subscribeFullscreen(applyFullscreenState)
+  applyFullscreenState()
 }
 
 window.addEventListener('keydown', event => {
@@ -619,14 +729,23 @@ window.addEventListener('keydown', event => {
     event.preventDefault()
     if (!outputMode) document.querySelector('#load').click()
   }
+  if (event.key === 'Escape' && remotePanel && !remotePanel.hidden) {
+    event.preventDefault()
+    setRemotePanelOpen(false)
+    return
+  }
+  if (event.key === 'Escape' && !codexOpen) {
+    window.hydraWindow?.fullscreenStatus?.().then(active => {
+      if (active) toggleFullscreen()
+    })
+  }
   if (event.key === 'F11') {
     event.preventDefault()
     document.body.classList.toggle('hide-code')
   }
   if (event.key === 'F' && event.shiftKey && !event.ctrlKey && !event.altKey) {
     event.preventDefault()
-    if (document.fullscreenElement) document.exitFullscreen()
-    else document.documentElement.requestFullscreen()
+    toggleFullscreen()
   }
 })
 
@@ -647,6 +766,7 @@ async function initializeLiveEditing() {
     window.hydraMedia?.subscribe(applyMediaState)
     applyMediaState(await window.hydraMedia?.status())
     applySpoutStatus(await window.hydraSpout?.status())
+    applyRemoteStatus(await window.hydraRemote?.status())
     await refreshSketchLabel()
   } catch (exception) {
     error.textContent = `Arquivo ao vivo: ${exception.message}`

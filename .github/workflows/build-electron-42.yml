@@ -35,8 +35,8 @@ jobs:
           --runtime electron
           --runtime-version 42.0.0
           --arch x64
-          --CD CMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-          --CD VCPKG_TARGET_TRIPLET="$env:VCPKG_DEFAULT_TRIPLET"
+          --CDCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          --CDVCPKG_TARGET_TRIPLET=$env:VCPKG_DEFAULT_TRIPLET
 
       - name: Build release module
         shell: pwsh
@@ -55,4 +55,5 @@ jobs:
           name: electron-spout-electron42-win-x64
           path: native/electron-spout/artifact
           if-no-files-found: error
+
 

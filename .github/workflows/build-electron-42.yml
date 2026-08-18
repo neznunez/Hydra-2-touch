@@ -6,6 +6,9 @@ on:
 jobs:
   build:
     runs-on: windows-2022
+    defaults:
+      run:
+        working-directory: native/electron-spout
     env:
       VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
     steps:
@@ -51,6 +54,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: electron-spout-electron42-win-x64
-          path: artifact
+          path: native/electron-spout/artifact
           if-no-files-found: error
 
